@@ -559,11 +559,37 @@ fn upstream_error_response(
 fn redact_sensitive_text(text: &str, secrets: &[String]) -> String {
     let mut redacted = text.to_string();
     for secret in secrets {
-        if !secret.is_empty() {
-            redacted = redacted.replace(secret, "[redacted]");
+        for variant in secret_redaction_variants(secret) {
+            redacted = redacted.replace(&variant, "[redacted]");
         }
     }
     redacted
+}
+
+fn secret_redaction_variants(secret: &str) -> Vec<String> {
+    if secret.is_empty() {
+        return Vec::new();
+    }
+    let encoded_upper = percent_encode(secret, true);
+    let encoded_lower = percent_encode(secret, false);
+    let mut variants = vec![secret.to_string(), encoded_upper, encoded_lower];
+    variants.sort();
+    variants.dedup();
+    variants
+}
+
+fn percent_encode(value: &str, uppercase_hex: bool) -> String {
+    let mut encoded = String::new();
+    for byte in value.as_bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            encoded.push(*byte as char);
+        } else if uppercase_hex {
+            encoded.push_str(&format!("%{byte:02X}"));
+        } else {
+            encoded.push_str(&format!("%{byte:02x}"));
+        }
+    }
+    encoded
 }
 
 #[cfg(test)]
@@ -683,6 +709,28 @@ mod tests {
     fn redacts_provider_secrets_from_upstream_errors() {
         let text = "request failed for https://example.test?key=super-secret-key";
         let out = redact_sensitive_text(text, &["super-secret-key".to_string()]);
+        assert_eq!(
+            out,
+            "request failed for https://example.test?key=[redacted]"
+        );
+    }
+
+    #[test]
+    fn redacts_url_encoded_provider_secrets_from_upstream_errors() {
+        let secret = "sk/test+secret=value";
+        let text = "request failed for https://example.test?key=sk%2Ftest%2Bsecret%3Dvalue";
+        let out = redact_sensitive_text(text, &[secret.to_string()]);
+        assert_eq!(
+            out,
+            "request failed for https://example.test?key=[redacted]"
+        );
+    }
+
+    #[test]
+    fn redacts_lowercase_url_encoded_provider_secrets_from_upstream_errors() {
+        let secret = "sk/test+secret=value";
+        let text = "request failed for https://example.test?key=sk%2ftest%2bsecret%3dvalue";
+        let out = redact_sensitive_text(text, &[secret.to_string()]);
         assert_eq!(
             out,
             "request failed for https://example.test?key=[redacted]"
