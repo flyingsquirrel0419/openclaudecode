@@ -13,9 +13,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/npm-wrapper-Node%2018%2B-339933?logo=node.js" alt="npm wrapper requires Node 18 or newer">
-  <img src="https://img.shields.io/badge/Rust-2024-000000?logo=rust" alt="Rust 2024">
-  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license">
+  <a href="https://www.npmjs.com/package/claude-occ"><img src="https://img.shields.io/npm/v/claude-occ?logo=npm&label=npm" alt="npm package version"></a>
+  <a href="https://github.com/flyingsquirrel0419/claude-occ/releases/latest"><img src="https://img.shields.io/github/v/release/flyingsquirrel0419/claude-occ?logo=github" alt="latest GitHub release"></a>
+  <img src="https://img.shields.io/badge/Rust-2024-000000?logo=rust&logoColor=white" alt="Rust 2024">
+  <img src="https://img.shields.io/github/license/flyingsquirrel0419/claude-occ" alt="MIT license">
 </p>
 
 claude-occ is a local Claude Code gateway proxy. It makes Claude Code talk to a local `occ` daemon
