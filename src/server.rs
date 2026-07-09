@@ -9,6 +9,7 @@ use axum::{
     routing::{get, post},
 };
 use serde_json::json;
+use subtle::ConstantTimeEq;
 
 use crate::{
     config::{Config, RuntimeState, remove_runtime, write_runtime},
@@ -70,7 +71,7 @@ async fn healthz(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 
 async fn models(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     if let Err(resp) = authorize(&state.config, &headers) {
-        return resp;
+        return *resp;
     }
     let models = state
         .providers
@@ -98,7 +99,7 @@ async fn count_tokens(
     Json(req): Json<MessageRequest>,
 ) -> Response {
     if let Err(resp) = authorize(&state.config, &headers) {
-        return resp;
+        return *resp;
     }
     Json(json!({ "input_tokens": estimate_tokens(&req) })).into_response()
 }
@@ -109,7 +110,7 @@ async fn messages(
     Json(req): Json<MessageRequest>,
 ) -> Response {
     if let Err(resp) = authorize(&state.config, &headers) {
-        return resp;
+        return *resp;
     }
     match state.providers.execute(req, &headers).await {
         Ok(resp) => resp,
@@ -129,7 +130,7 @@ async fn messages(
 
 async fn api_config(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     if let Err(resp) = authorize(&state.config, &headers) {
-        return resp;
+        return *resp;
     }
     Json(json!({
         "host": state.config.host,
@@ -142,14 +143,14 @@ async fn api_config(State(state): State<Arc<AppState>>, headers: HeaderMap) -> R
 
 async fn api_providers(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     if let Err(resp) = authorize(&state.config, &headers) {
-        return resp;
+        return *resp;
     }
     Json(json!({ "providers": state.config.providers })).into_response()
 }
 
 async fn api_stop(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     if let Err(resp) = authorize(&state.config, &headers) {
-        return resp;
+        return *resp;
     }
     tokio::spawn(async {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -159,26 +160,89 @@ async fn api_stop(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Res
     Json(json!({ "ok": true })).into_response()
 }
 
-fn authorize(config: &Config, headers: &HeaderMap) -> Result<(), Response> {
+fn authorize(config: &Config, headers: &HeaderMap) -> Result<(), Box<Response>> {
     let expected = &config.gateway_token;
     let got = headers
         .get("x-api-key")
         .or_else(|| headers.get("authorization"))
         .and_then(|value| value.to_str().ok())
-        .map(|value| value.trim_start_matches("Bearer ").trim());
-    if got == Some(expected.as_str()) {
+        .map(normalize_auth_value);
+    if got
+        .map(|value| constant_time_token_eq(expected, value))
+        .unwrap_or(false)
+    {
         Ok(())
     } else {
-        Err((
-            StatusCode::UNAUTHORIZED,
-            Json(json!({
-                "type": "error",
-                "error": {
-                    "type": "authentication_error",
-                    "message": "invalid openclaude gateway token"
-                }
-            })),
-        )
-            .into_response())
+        Err(Box::new(
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({
+                    "type": "error",
+                    "error": {
+                        "type": "authentication_error",
+                        "message": "invalid openclaude gateway token"
+                    }
+                })),
+            )
+                .into_response(),
+        ))
+    }
+}
+
+fn normalize_auth_value(value: &str) -> &str {
+    value
+        .trim()
+        .strip_prefix("Bearer ")
+        .unwrap_or_else(|| value.trim())
+        .trim()
+}
+
+fn constant_time_token_eq(expected: &str, got: &str) -> bool {
+    expected.len() == got.len() && expected.as_bytes().ct_eq(got.as_bytes()).into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::header::{AUTHORIZATION, HeaderValue};
+
+    fn config_with_token(token: &str) -> Config {
+        let mut cfg = Config::default_config();
+        cfg.gateway_token = token.to_string();
+        cfg
+    }
+
+    #[test]
+    fn authorization_accepts_x_api_key() {
+        let cfg = config_with_token("occ_test_token");
+        let mut headers = HeaderMap::new();
+        headers.insert("x-api-key", HeaderValue::from_static("occ_test_token"));
+        assert!(authorize(&cfg, &headers).is_ok());
+    }
+
+    #[test]
+    fn authorization_accepts_bearer_token() {
+        let cfg = config_with_token("occ_test_token");
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_static("Bearer occ_test_token"),
+        );
+        assert!(authorize(&cfg, &headers).is_ok());
+    }
+
+    #[test]
+    fn authorization_rejects_wrong_token() {
+        let cfg = config_with_token("occ_test_token");
+        let mut headers = HeaderMap::new();
+        headers.insert("x-api-key", HeaderValue::from_static("occ_wrong_token"));
+        assert!(authorize(&cfg, &headers).is_err());
+    }
+
+    #[test]
+    fn token_comparison_requires_exact_value() {
+        assert!(constant_time_token_eq("occ_abc", "occ_abc"));
+        assert!(!constant_time_token_eq("occ_abc", "occ_abd"));
+        assert!(!constant_time_token_eq("occ_abc", "occ_abc_extra"));
     }
 }

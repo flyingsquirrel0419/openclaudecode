@@ -252,6 +252,7 @@ npm pack --dry-run
 
 ```bash
 cargo test
+cargo clippy --all-targets -- -D warnings
 ./scripts/command-surface.sh
 ./scripts/smoke.sh
 cargo build --release
@@ -287,6 +288,7 @@ scripts/             command-surface and gateway smoke tests
 See [SECURITY.md](SECURITY.md). In short:
 
 - do not commit `~/.openclaude/config.json`;
+- openclaude writes config and runtime files with owner-only permissions on Unix;
 - prefer environment-variable references for provider keys;
 - keep the gateway on loopback unless you have reviewed the exposure;
 - use `occ native` for Claude Code subscription OAuth.

@@ -27,13 +27,13 @@ pub fn install_claude_shim() -> anyhow::Result<()> {
     let cfg = Config::load_or_create()?;
     let claude = find_on_path("claude").context("could not find claude on PATH")?;
     if is_shim(&claude) {
-        if let Ok(raw) = fs::read_to_string(shim_state_path()?) {
-            if let Ok(state) = serde_json::from_str::<ShimState>(&raw) {
-                let occ = env::current_exe().context("resolve current occ executable")?;
-                write_unix_shim(&claude, &state.backup_path, &occ, &cfg)?;
-                println!("refreshed claude shim: {}", claude.display());
-                return Ok(());
-            }
+        if let Ok(raw) = fs::read_to_string(shim_state_path()?)
+            && let Ok(state) = serde_json::from_str::<ShimState>(&raw)
+        {
+            let occ = env::current_exe().context("resolve current occ executable")?;
+            write_unix_shim(&claude, &state.backup_path, &occ, &cfg)?;
+            println!("refreshed claude shim: {}", claude.display());
+            return Ok(());
         }
         println!("claude shim already installed: {}", claude.display());
         return Ok(());
@@ -152,5 +152,79 @@ exec {real} "$@"
         perms.set_mode(0o755);
         fs::set_permissions(wrapper, perms)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{AdapterKind, ProviderConfig};
+    use std::collections::{BTreeMap, HashMap};
+
+    #[test]
+    fn shell_quote_str_escapes_single_quotes() {
+        assert_eq!(shell_quote_str("abc'def"), "'abc'\\''def'");
+    }
+
+    #[test]
+    fn backup_path_uses_openclaude_real_suffix() {
+        assert_eq!(
+            backup_path_for(Path::new("/usr/bin/claude")),
+            PathBuf::from("/usr/bin/claude.openclaude-real")
+        );
+    }
+
+    #[test]
+    fn detects_existing_shim_marker() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("claude");
+        fs::write(&path, format!("#!/bin/sh\n# {SHIM_MARKER}\n")).unwrap();
+        assert!(is_shim(&path));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn writes_unix_shim_with_gateway_env_and_executable_mode() {
+        let dir = tempfile::tempdir().unwrap();
+        let wrapper = dir.path().join("claude");
+        let real = dir.path().join("claude.real");
+        let occ = dir.path().join("occ");
+        fs::write(&real, "#!/bin/sh\n").unwrap();
+        fs::write(&occ, "#!/bin/sh\n").unwrap();
+
+        let mut providers = BTreeMap::new();
+        providers.insert(
+            "test".to_string(),
+            ProviderConfig {
+                adapter: AdapterKind::OpenAiChat,
+                base_url: "https://example.test/v1".to_string(),
+                api_key: Some("${TEST_API_KEY}".to_string()),
+                default_model: Some("model-a".to_string()),
+                models: vec!["model-a".to_string(), "model-b".to_string()],
+                context_window: None,
+                model_context_windows: HashMap::new(),
+                model_input_modalities: HashMap::new(),
+                reasoning_efforts: None,
+                model_reasoning_efforts: HashMap::new(),
+                no_vision_models: Vec::new(),
+            },
+        );
+        let cfg = Config {
+            host: "127.0.0.1".to_string(),
+            port: 10110,
+            gateway_token: "occ_test".to_string(),
+            default_provider: "test".to_string(),
+            providers,
+        };
+
+        write_unix_shim(&wrapper, &real, &occ, &cfg).unwrap();
+        let body = fs::read_to_string(&wrapper).unwrap();
+        assert!(body.contains("unset ANTHROPIC_AUTH_TOKEN"));
+        assert!(body.contains("export ANTHROPIC_API_KEY=\"occ_test\""));
+        assert!(body.contains("ANTHROPIC_DEFAULT_SONNET_MODEL='test/model-a'"));
+        assert!(body.contains("exec "));
+
+        let mode = fs::metadata(&wrapper).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o755);
     }
 }

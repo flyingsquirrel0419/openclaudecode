@@ -38,16 +38,16 @@ impl ProviderRuntime {
     }
 
     pub fn route(&self, model: &str) -> anyhow::Result<(Route, ProviderConfig)> {
-        if let Some((provider_name, model_id)) = model.split_once('/') {
-            if let Some(provider) = self.config.providers.get(provider_name) {
-                return Ok((
-                    Route {
-                        provider_name: provider_name.to_string(),
-                        model: model_id.to_string(),
-                    },
-                    provider.clone(),
-                ));
-            }
+        if let Some((provider_name, model_id)) = model.split_once('/')
+            && let Some(provider) = self.config.providers.get(provider_name)
+        {
+            return Ok((
+                Route {
+                    provider_name: provider_name.to_string(),
+                    model: model_id.to_string(),
+                },
+                provider.clone(),
+            ));
         }
         let provider = self
             .config
@@ -113,6 +113,7 @@ impl ProviderRuntime {
         if let Some(key) = provider.resolve_api_key() {
             headers.insert("x-api-key", HeaderValue::from_str(&key)?);
         }
+        let secrets = provider_secrets(&provider);
 
         let upstream = self
             .client
@@ -121,7 +122,7 @@ impl ProviderRuntime {
             .json(&req)
             .send()
             .await?;
-        Ok(proxy_response(upstream).await)
+        Ok(proxy_response(upstream, &secrets).await)
     }
 
     async fn openai_chat(
@@ -141,6 +142,7 @@ impl ProviderRuntime {
                 HeaderValue::from_str(&format!("Bearer {key}"))?,
             );
         }
+        let secrets = provider_secrets(&provider);
 
         let stream = req.stream.unwrap_or(false);
         let body = openai_body(&req, stream);
@@ -152,12 +154,12 @@ impl ProviderRuntime {
             .send()
             .await?;
         if stream {
-            Ok(transform_openai_stream(upstream).await)
+            Ok(transform_openai_stream(upstream, &secrets).await)
         } else {
             let status = upstream.status();
             let text = upstream.text().await.unwrap_or_default();
             if !status.is_success() {
-                return Ok((status, text).into_response());
+                return Ok(upstream_error_response(status, text, &secrets));
             }
             Ok(Json(anthropic_from_openai_json(&req.model, &text)).into_response())
         }
@@ -175,24 +177,29 @@ impl ProviderRuntime {
             .resolve_api_key()
             .context("google adapter requires api_key")?;
         let url = format!(
-            "{}/v1beta/models/{}:generateContent?key={}",
+            "{}/v1beta/models/{}:generateContent",
             provider.base_url.trim_end_matches('/'),
-            req.model,
-            key
+            req.model
         );
+        let secrets = provider_secrets(&provider);
         let upstream = self
             .client
             .post(url)
+            .query(&[("key", key.as_str())])
             .json(&google_body(&req))
             .send()
             .await?;
         let status = upstream.status();
         let text = upstream.text().await.unwrap_or_default();
         if !status.is_success() {
-            return Ok((status, text).into_response());
+            return Ok(upstream_error_response(status, text, &secrets));
         }
         Ok(Json(anthropic_from_google_json(&req.model, &text)).into_response())
     }
+}
+
+fn provider_secrets(provider: &ProviderConfig) -> Vec<String> {
+    provider.resolve_api_key().into_iter().collect()
 }
 
 fn openai_body(req: &MessageRequest, stream: bool) -> Value {
@@ -243,10 +250,10 @@ fn append_openai_messages(messages: &mut Vec<Value>, msg: &crate::models::Messag
                             "tool_call_id": tool_call_id,
                             "content": part.get("content").map(extract_text).unwrap_or_default()
                         }));
-                    } else if part.get("type").and_then(Value::as_str) == Some("text") {
-                        if let Some(text) = part.get("text").and_then(Value::as_str) {
-                            user_text.push(text.to_string());
-                        }
+                    } else if part.get("type").and_then(Value::as_str) == Some("text")
+                        && let Some(text) = part.get("text").and_then(Value::as_str)
+                    {
+                        user_text.push(text.to_string());
                     }
                 }
                 if !user_text.is_empty() {
@@ -435,8 +442,12 @@ fn anthropic_from_openai_json(model: &str, raw: &str) -> Value {
     })
 }
 
-async fn proxy_response(upstream: reqwest::Response) -> Response {
+async fn proxy_response(upstream: reqwest::Response, secrets: &[String]) -> Response {
     let status = upstream.status();
+    if !status.is_success() {
+        let text = upstream.text().await.unwrap_or_default();
+        return upstream_error_response(status, text, secrets);
+    }
     let mut builder = Response::builder().status(status);
     for (name, value) in upstream.headers() {
         if name.as_str().eq_ignore_ascii_case("content-length") {
@@ -452,11 +463,11 @@ async fn proxy_response(upstream: reqwest::Response) -> Response {
     builder.body(Body::from_stream(stream)).unwrap()
 }
 
-async fn transform_openai_stream(upstream: reqwest::Response) -> Response {
+async fn transform_openai_stream(upstream: reqwest::Response, secrets: &[String]) -> Response {
     let status = upstream.status();
     if !status.is_success() {
         let text = upstream.text().await.unwrap_or_default();
-        return (status, text).into_response();
+        return upstream_error_response(status, text, secrets);
     }
 
     let stream = async_stream::stream! {
@@ -535,6 +546,24 @@ async fn transform_openai_stream(upstream: reqwest::Response) -> Response {
         .header("cache-control", "no-cache")
         .body(Body::from_stream(stream))
         .unwrap()
+}
+
+fn upstream_error_response(
+    status: reqwest::StatusCode,
+    text: String,
+    secrets: &[String],
+) -> Response {
+    (status, redact_sensitive_text(&text, secrets)).into_response()
+}
+
+fn redact_sensitive_text(text: &str, secrets: &[String]) -> String {
+    let mut redacted = text.to_string();
+    for secret in secrets {
+        if !secret.is_empty() {
+            redacted = redacted.replace(secret, "[redacted]");
+        }
+    }
+    redacted
 }
 
 #[cfg(test)]
@@ -648,5 +677,15 @@ mod tests {
         assert_eq!(out["content"][0]["type"], "tool_use");
         assert_eq!(out["content"][0]["name"], "write_file");
         assert_eq!(out["content"][0]["input"]["path"], "b.txt");
+    }
+
+    #[test]
+    fn redacts_provider_secrets_from_upstream_errors() {
+        let text = "request failed for https://example.test?key=super-secret-key";
+        let out = redact_sensitive_text(text, &["super-secret-key".to_string()]);
+        assert_eq!(
+            out,
+            "request failed for https://example.test?key=[redacted]"
+        );
     }
 }

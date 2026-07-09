@@ -32,6 +32,7 @@ Run the narrowest command that proves your change:
 
 ```bash
 cargo test
+cargo clippy --all-targets -- -D warnings
 ./scripts/command-surface.sh
 ./scripts/smoke.sh
 cargo build --release
@@ -123,6 +124,7 @@ occ provider add umans \
 
 - [ ] `cargo fmt`
 - [ ] `cargo test`
+- [ ] `cargo clippy --all-targets -- -D warnings`
 - [ ] Relevant smoke or command-surface script
 - [ ] README or CHANGELOG updated when behavior changed
 - [ ] No credentials, tokens, or machine-local secrets in the diff

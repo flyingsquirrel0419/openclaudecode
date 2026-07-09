@@ -2,8 +2,12 @@ use std::{
     collections::BTreeMap,
     collections::HashMap,
     fs,
+    io::Write,
     path::{Path, PathBuf},
 };
+
+#[cfg(unix)]
+use std::os::unix::{fs::OpenOptionsExt, fs::PermissionsExt};
 
 use anyhow::Context;
 use directories::BaseDirs;
@@ -141,12 +145,11 @@ impl Config {
 
     pub fn save(&self) -> anyhow::Result<()> {
         let path = config_path()?;
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).context("create config dir")?;
-        }
         let tmp = path.with_extension("json.tmp");
-        fs::write(&tmp, serde_json::to_string_pretty(self)? + "\n").context("write temp config")?;
-        fs::rename(tmp, path).context("replace config")?;
+        write_private_file(&tmp, &(serde_json::to_string_pretty(self)? + "\n"))
+            .context("write temp config")?;
+        fs::rename(&tmp, &path).context("replace config")?;
+        set_private_permissions(&path).context("set config permissions")?;
         Ok(())
     }
 
@@ -350,6 +353,21 @@ mod tests {
             "umans/umans-glm-5.2"
         );
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn private_file_writer_uses_owner_only_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("secret.json");
+        write_private_file(&path, "{\"token\":\"secret\"}\n").unwrap();
+
+        let raw = fs::read_to_string(&path).unwrap();
+        assert_eq!(raw, "{\"token\":\"secret\"}\n");
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -450,8 +468,7 @@ pub fn runtime_path() -> anyhow::Result<PathBuf> {
 
 pub fn write_runtime(state: &RuntimeState) -> anyhow::Result<()> {
     let path = runtime_path()?;
-    ensure_parent(&path)?;
-    fs::write(path, serde_json::to_string_pretty(state)? + "\n")?;
+    write_private_file(&path, &(serde_json::to_string_pretty(state)? + "\n"))?;
     Ok(())
 }
 
@@ -471,6 +488,40 @@ pub fn remove_runtime() -> anyhow::Result<()> {
 pub fn ensure_parent(path: &Path) -> anyhow::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
+    }
+    Ok(())
+}
+
+pub fn write_private_file(path: &Path, contents: &str) -> anyhow::Result<()> {
+    ensure_parent(path)?;
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        options.mode(0o600);
+    }
+    let mut file = options
+        .open(path)
+        .with_context(|| format!("open private file {}", path.display()))?;
+    file.write_all(contents.as_bytes())
+        .with_context(|| format!("write private file {}", path.display()))?;
+    file.sync_all()
+        .with_context(|| format!("sync private file {}", path.display()))?;
+    set_private_permissions(path)?;
+    Ok(())
+}
+
+pub fn set_private_permissions(path: &Path) -> anyhow::Result<()> {
+    #[cfg(unix)]
+    {
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+            .with_context(|| format!("chmod 0600 {}", path.display()))?;
+    }
+    #[cfg(not(unix))]
+    {
+        let mut perms = fs::metadata(path)?.permissions();
+        perms.set_readonly(false);
+        fs::set_permissions(path, perms)?;
     }
     Ok(())
 }

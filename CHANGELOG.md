@@ -42,12 +42,16 @@ security boundaries and native-mode behavior should remain explicit.
 - `occ env` and the Claude shim unset `ANTHROPIC_AUTH_TOKEN` before routing through openclaude.
 - Gateway data-plane and management endpoints require the generated local gateway token.
 - Claude Code subscription OAuth is treated as native-only and is not reused by openclaude.
+- Config and runtime files are written with owner-only permissions on Unix.
+- Gateway token checks use constant-time comparison.
+- Upstream error responses redact configured provider API keys before returning errors to the client.
 
 ### Changed
 
 - `occ native` now stops the proxy before restoring native Claude Code.
 - `occ init` now stops an existing proxy before writing a new config and refreshes an installed shim
   after config changes.
+- Added PR/main CI for fmt, clippy, tests, command-surface, smoke, release build, and npm dry-run.
 
 ### Known limitations
 

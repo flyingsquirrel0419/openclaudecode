@@ -31,6 +31,9 @@ openclaude has two separate credential classes:
 Treat both as secrets. Do not commit `~/.openclaude/config.json`, shell histories containing direct
 keys, or logs with auth headers.
 
+On Unix systems, openclaude writes config and runtime files with owner-only permissions (`0600`).
+Keep parent directories and shell environment files under the same access discipline.
+
 ## Claude Code Subscription OAuth
 
 Claude Code subscription OAuth is native-only. openclaude intentionally does not extract, forward, or

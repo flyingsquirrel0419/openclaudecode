@@ -1022,10 +1022,10 @@ async fn cmd_init(reset: bool) -> anyhow::Result<()> {
     save_init_config(cfg)?;
     println!();
     println!("Config saved to {}", config_path()?.display());
-    if install_shim || integration::shim_state_path()?.exists() {
-        if let Err(err) = integration::install_claude_shim() {
-            println!("Claude autostart shim skipped: {err:#}");
-        }
+    if (install_shim || integration::shim_state_path()?.exists())
+        && let Err(err) = integration::install_claude_shim()
+    {
+        println!("Claude autostart shim skipped: {err:#}");
     }
     println!();
     println!("Setup complete.");
@@ -1042,12 +1042,13 @@ async fn stop_proxy_before_init() -> anyhow::Result<()> {
         cmd_stop()
             .await
             .context("stop existing proxy before init")?;
-    } else if let Ok(runtime) = config::read_runtime() {
-        if process_exists(runtime.pid) && is_openclaude_pid(runtime.pid) {
-            stop_local_gateway_fallback(&cfg, "stale runtime before init")
-                .await
-                .context("stop stale proxy before init")?;
-        }
+    } else if let Ok(runtime) = config::read_runtime()
+        && process_exists(runtime.pid)
+        && is_openclaude_pid(runtime.pid)
+    {
+        stop_local_gateway_fallback(&cfg, "stale runtime before init")
+            .await
+            .context("stop stale proxy before init")?;
     }
     Ok(())
 }
@@ -1056,10 +1057,9 @@ fn refresh_existing_shim_after_init() {
     if integration::shim_state_path()
         .map(|path| path.exists())
         .unwrap_or(false)
+        && let Err(err) = integration::install_claude_shim()
     {
-        if let Err(err) = integration::install_claude_shim() {
-            println!("Claude autostart shim refresh skipped: {err:#}");
-        }
+        println!("Claude autostart shim refresh skipped: {err:#}");
     }
 }
 
@@ -1111,14 +1111,13 @@ async fn init_model_choices(provider: InitProvider, api_key: &str) -> Vec<String
     if provider.auth_kind == AuthKind::Key && provider_config.resolve_api_key().is_none() {
         return provider_config.models;
     }
-    if matches!(provider.auth_kind, AuthKind::Key | AuthKind::Local) {
-        if let Ok(models) = fetch_live_models(provider.id, &provider_config).await {
-            if !models.is_empty() {
-                provider_config.models = models.clone();
-                enrich_provider_metadata(provider.id, &mut provider_config);
-                return provider_config.models;
-            }
-        }
+    if matches!(provider.auth_kind, AuthKind::Key | AuthKind::Local)
+        && let Ok(models) = fetch_live_models(provider.id, &provider_config).await
+        && !models.is_empty()
+    {
+        provider_config.models = models.clone();
+        enrich_provider_metadata(provider.id, &mut provider_config);
+        return provider_config.models;
     }
     provider_config.models
 }
@@ -1222,10 +1221,10 @@ fn prompt_model_choice(default_model: Option<&str>, models: &[String]) -> anyhow
     if answer.trim().is_empty() {
         return Ok(models[default_idx - 1].clone());
     }
-    if let Ok(idx) = answer.trim().parse::<usize>() {
-        if (1..=models.len()).contains(&idx) {
-            return Ok(models[idx - 1].clone());
-        }
+    if let Ok(idx) = answer.trim().parse::<usize>()
+        && (1..=models.len()).contains(&idx)
+    {
+        return Ok(models[idx - 1].clone());
     }
     Ok(answer.trim().to_string())
 }
@@ -2284,10 +2283,10 @@ fn collect_model_entries(
     cfg: &Config,
     provider_filter: Option<&str>,
 ) -> anyhow::Result<Vec<ModelEntry>> {
-    if let Some(provider) = provider_filter {
-        if !cfg.providers.contains_key(provider) {
-            anyhow::bail!("Provider \"{provider}\" is not configured. See: occ provider list");
-        }
+    if let Some(provider) = provider_filter
+        && !cfg.providers.contains_key(provider)
+    {
+        anyhow::bail!("Provider \"{provider}\" is not configured. See: occ provider list");
     }
     let mut entries = Vec::new();
     for (provider_name, provider) in &cfg.providers {
