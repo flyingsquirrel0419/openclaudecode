@@ -52,6 +52,8 @@ security boundaries and native-mode behavior should remain explicit.
 - `occ init` now stops an existing proxy before writing a new config and refreshes an installed shim
   after config changes.
 - Added PR/main CI for fmt, clippy, tests, command-surface, smoke, release build, and npm dry-run.
+- Release workflow now fails early with a clear message when the `NPM_TOKEN` repository secret is
+  missing.
 
 ### Known limitations
 

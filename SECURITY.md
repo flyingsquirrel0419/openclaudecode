@@ -83,3 +83,5 @@ to re-enable openclaude routing.
 - Redact `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, provider API keys, and `gateway_token` in bug
   reports.
 - Rotate provider keys if a config file or shell transcript is shared accidentally.
+- Store npm publishing credentials only as the GitHub Actions `NPM_TOKEN` repository secret; never
+  commit `.npmrc` files or token-bearing release logs.

@@ -120,6 +120,30 @@ occ provider add umans \
   --set-default
 ```
 
+## Release Publishing
+
+GitHub releases and npm publishing are handled by `.github/workflows/release.yml` on `v*` tags.
+
+Before publishing to npm, add an npm automation token as a private repository secret:
+
+```bash
+gh secret set NPM_TOKEN --repo flyingsquirrel0419/openclaudecode
+```
+
+Or, if the token is already in your shell:
+
+```bash
+gh secret set NPM_TOKEN --repo flyingsquirrel0419/openclaudecode --body "$NPM_TOKEN"
+```
+
+Verify that the secret exists without printing its value:
+
+```bash
+gh secret list --repo flyingsquirrel0419/openclaudecode
+```
+
+Do not commit npm tokens, `.npmrc`, or command transcripts that contain token values.
+
 ## Pull Request Checklist
 
 - [ ] `cargo fmt`

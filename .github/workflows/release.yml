@@ -75,6 +75,14 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      - name: Verify npm publish token
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::Missing repository secret NPM_TOKEN. Set it with: gh secret set NPM_TOKEN --repo flyingsquirrel0419/openclaudecode"
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm publish --provenance
         working-directory: npm
         env:
