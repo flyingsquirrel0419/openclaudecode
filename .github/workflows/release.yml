@@ -78,7 +78,7 @@ jobs:
       - name: Verify npm publish token
         run: |
           if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::Missing repository secret NPM_TOKEN. Set it with: gh secret set NPM_TOKEN --repo flyingsquirrel0419/openclaudecode"
+            echo "::error::Missing repository secret NPM_TOKEN. Set it with: gh secret set NPM_TOKEN --repo flyingsquirrel0419/claude-occ"
             exit 1
           fi
         env:

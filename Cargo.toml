@@ -1,5 +1,5 @@
 [package]
-name = "openclaude"
+name = "claude-occ"
 version = "1.0.0"
 edition = "2024"
 license = "MIT"

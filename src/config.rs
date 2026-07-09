@@ -247,7 +247,7 @@ fn default_model_slot_env(prefix: &str, model: &str) -> Vec<(String, String)> {
         (format!("{prefix}_MODEL_NAME"), model.to_string()),
         (
             format!("{prefix}_MODEL_DESCRIPTION"),
-            "openclaude proxy model".to_string(),
+            "occ proxy model".to_string(),
         ),
     ]
 }
@@ -264,7 +264,7 @@ fn custom_model_slot_env(model: &str) -> Vec<(String, String)> {
         ),
         (
             "ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION".to_string(),
-            "openclaude proxy model".to_string(),
+            "occ proxy model".to_string(),
         ),
     ]
 }
@@ -451,11 +451,11 @@ pub fn enrich_provider_metadata(name: &str, provider: &mut ProviderConfig) {
 }
 
 pub fn config_dir() -> anyhow::Result<PathBuf> {
-    if let Some(raw) = std::env::var_os("OPENCLAUDE_HOME") {
+    if let Some(raw) = std::env::var_os("CLAUDE_OCC_HOME") {
         return Ok(PathBuf::from(raw));
     }
     let base = BaseDirs::new().context("resolve home directory")?;
-    Ok(base.home_dir().join(".openclaude"))
+    Ok(base.home_dir().join(".claude-occ"))
 }
 
 pub fn config_path() -> anyhow::Result<PathBuf> {

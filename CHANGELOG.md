@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to openclaude are documented here.
+All notable changes to claude-occ are documented here.
 
 This project follows a pragmatic changelog: CLI details may evolve, but security boundaries and
 native-mode behavior should remain explicit.
@@ -10,9 +10,9 @@ native-mode behavior should remain explicit.
 ### Added
 
 - Rust CLI binary `occ`.
-- npm wrapper package metadata for the `occ`, `openclaude`, and `openclaudecode` commands.
+- npm wrapper package metadata for the `occ` and `claude-occ` commands.
 - Interactive `occ init` with an opencodex-style provider picker.
-- Single-file config at `~/.openclaude/config.json`.
+- Single-file config at `~/.claude-occ/config.json`.
 - Local gateway endpoints:
   - `GET /healthz`
   - `GET /v1/models`
@@ -39,9 +39,9 @@ native-mode behavior should remain explicit.
 
 ### Security
 
-- `occ env` and the Claude shim unset `ANTHROPIC_AUTH_TOKEN` before routing through openclaude.
+- `occ env` and the Claude shim unset `ANTHROPIC_AUTH_TOKEN` before routing through claude-occ.
 - Gateway data-plane and management endpoints require the generated local gateway token.
-- Claude Code subscription OAuth is treated as native-only and is not reused by openclaude.
+- Claude Code subscription OAuth is treated as native-only and is not reused by claude-occ.
 - Config and runtime files are written with owner-only permissions on Unix.
 - Gateway token checks use constant-time comparison.
 - Upstream error responses redact configured provider API keys before returning errors to the client.

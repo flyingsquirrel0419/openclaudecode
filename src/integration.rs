@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{Config, config_dir, ensure_parent};
 
-const SHIM_MARKER: &str = "openclaude claude autostart shim";
+const SHIM_MARKER: &str = "claude-occ claude autostart shim";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ShimState {
@@ -63,7 +63,7 @@ pub fn install_claude_shim() -> anyhow::Result<()> {
 pub fn uninstall_claude_shim() -> anyhow::Result<()> {
     let state_path = shim_state_path()?;
     if !state_path.exists() {
-        println!("no openclaude claude shim state found; native mode already active");
+        println!("no claude-occ claude shim state found; native mode already active");
         return Ok(());
     }
     let state: ShimState = serde_json::from_str(&fs::read_to_string(&state_path)?)?;
@@ -93,7 +93,7 @@ fn backup_path_for(path: &Path) -> PathBuf {
         .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("claude");
-    path.with_file_name(format!("{file_name}.openclaude-real"))
+    path.with_file_name(format!("{file_name}.claude-occ-real"))
 }
 
 fn is_shim(path: &Path) -> bool {
@@ -167,10 +167,10 @@ mod tests {
     }
 
     #[test]
-    fn backup_path_uses_openclaude_real_suffix() {
+    fn backup_path_uses_claude_occ_real_suffix() {
         assert_eq!(
             backup_path_for(Path::new("/usr/bin/claude")),
-            PathBuf::from("/usr/bin/claude.openclaude-real")
+            PathBuf::from("/usr/bin/claude.claude-occ-real")
         );
     }
 

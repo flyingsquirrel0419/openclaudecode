@@ -44,7 +44,7 @@ pub async fn serve(addr: SocketAddr, config: Config) -> anyhow::Result<()> {
         .route("/api/stop", post(api_stop))
         .with_state(Arc::new(state));
 
-    tracing::info!("openclaude listening on http://{addr}");
+    tracing::info!("claude-occ listening on http://{addr}");
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .context("bind listener")?;
@@ -55,14 +55,14 @@ pub async fn serve(addr: SocketAddr, config: Config) -> anyhow::Result<()> {
 
 async fn root() -> impl IntoResponse {
     Json(json!({
-        "service": "openclaude",
+        "service": "claude-occ",
         "message": "Claude Code gateway is running"
     }))
 }
 
 async fn healthz(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     Json(json!({
-        "service": "openclaude",
+        "service": "claude-occ",
         "status": "ok",
         "port": state.config.port,
         "providers": state.config.providers.len()
@@ -180,7 +180,7 @@ fn authorize(config: &Config, headers: &HeaderMap) -> Result<(), Box<Response>> 
                     "type": "error",
                     "error": {
                         "type": "authentication_error",
-                        "message": "invalid openclaude gateway token"
+                        "message": "invalid claude-occ gateway token"
                     }
                 })),
             )

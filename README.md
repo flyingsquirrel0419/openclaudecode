@@ -1,4 +1,4 @@
-# openclaude
+# claude-occ
 
 <p align="center">
   <b>Claude Code, routed through your own provider gateway.</b>
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/openclaude-banner.png" alt="openclaude banner showing Claude Code routed through a local occ gateway to provider APIs" width="820">
+  <img src="assets/occ-banner.png" alt="occ banner showing Claude Code routed through a local gateway to provider APIs" width="820">
 </p>
 
 <p align="center">
@@ -18,21 +18,21 @@
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license">
 </p>
 
-openclaude is a local Claude Code gateway proxy. It makes Claude Code talk to a local `occ` daemon
+claude-occ is a local Claude Code gateway proxy. It makes Claude Code talk to a local `occ` daemon
 through the Anthropic Messages API, while `occ` routes requests to Anthropic-compatible,
 OpenAI-compatible, Google, Azure, local, or custom providers.
 
 It is intentionally separate from [opencodex](https://github.com/lidge-jun/opencodex). opencodex
-targets Codex and the OpenAI Responses API; openclaude targets Claude Code and the
+targets Codex and the OpenAI Responses API; claude-occ targets Claude Code and the
 `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY` integration surface.
 
-> Claude Code subscription OAuth stays native-only. openclaude does not extract or reuse Claude Code
+> Claude Code subscription OAuth stays native-only. claude-occ does not extract or reuse Claude Code
 > subscription tokens as upstream credentials. Use `occ native` when you want Claude Code's built-in
 > subscription mode.
 
 ## Why
 
-Claude Code already speaks the Anthropic Messages API. openclaude places a small authenticated proxy
+Claude Code already speaks the Anthropic Messages API. claude-occ places a small authenticated proxy
 between Claude Code and your chosen upstream so you can:
 
 - use provider API keys or environment-variable references such as `${UMANS_API_KEY}`;
@@ -42,7 +42,7 @@ between Claude Code and your chosen upstream so you can:
 - keep the proxy on loopback and authenticate Claude Code with a generated local gateway token.
 
 <p align="center">
-  <img src="assets/openclaude-flow.png" alt="openclaude request flow from Claude Code to occ to configured model providers" width="820">
+  <img src="assets/occ-flow.png" alt="occ request flow from Claude Code to configured model providers" width="820">
 </p>
 
 ## Quick Start
@@ -55,7 +55,7 @@ Prerequisites:
 Install from npm after the package is published:
 
 ```bash
-npm install -g openclaudecode
+npm install -g claude-occ
 ```
 
 Install from a source checkout today:
@@ -71,7 +71,7 @@ Set up a provider:
 occ init
 ```
 
-`occ init` is interactive. It writes `~/.openclaude/config.json`, stops any stale proxy first, asks
+`occ init` is interactive. It writes `~/.claude-occ/config.json`, stops any stale proxy first, asks
 for a provider, stores API keys as direct values or environment-variable references, lets you choose a
 model, and offers the Claude autostart shim. The shim is the default path: when you run `claude`, it
 runs `occ ensure`, injects the local gateway environment, and then launches the real Claude Code
@@ -97,7 +97,7 @@ Return to native Claude Code:
 occ native
 ```
 
-`occ native` stops the openclaude proxy, removes the `claude` shim, and restores native Claude Code
+`occ native` stops the claude-occ proxy, removes the `claude` shim, and restores native Claude Code
 behavior. Re-enable routing later with:
 
 ```bash
@@ -183,7 +183,7 @@ can show routed models instead of only native Claude families.
 Config lives at:
 
 ```text
-~/.openclaude/config.json
+~/.claude-occ/config.json
 ```
 
 Example:
@@ -211,11 +211,11 @@ Example:
 ```
 
 API keys may be literal strings, `$ENV_VAR`, or `${ENV_VAR}` references. The generated
-`gateway_token` is used only between Claude Code and the local openclaude gateway.
+`gateway_token` is used only between Claude Code and the local claude-occ gateway.
 
 ## Gateway API
 
-openclaude implements the Claude Code-facing parts of the Anthropic Messages API:
+claude-occ implements the Claude Code-facing parts of the Anthropic Messages API:
 
 | Endpoint | Purpose | Auth |
 |---|---|---|
@@ -233,7 +233,7 @@ the config file and gateway token like credentials.
 ## Build From Source
 
 ```bash
-cd openclaude
+cd claude-occ
 cargo test
 cargo build --release
 ./target/release/occ --help
@@ -259,7 +259,7 @@ cargo build --release
 ```
 
 `scripts/smoke.sh` starts a fake OpenAI-compatible upstream, sends Claude Messages requests through
-openclaude, and verifies non-streaming and streaming responses.
+claude-occ, and verifies non-streaming and streaming responses.
 
 ## Project Layout
 
@@ -276,7 +276,7 @@ scripts/             command-surface and gateway smoke tests
 
 ## Compatibility Notes
 
-- opencodex targets Codex and `/v1/responses`; openclaude targets Claude Code and `/v1/messages`.
+- opencodex targets Codex and `/v1/responses`; claude-occ targets Claude Code and `/v1/messages`.
 - `occ service` exists for command compatibility, but the current implementation uses lightweight
   `occ ensure` / launcher-shim behavior rather than an OS service manager.
 - `occ gui` currently prints the local dashboard URL; a web dashboard is not yet implemented.
@@ -287,8 +287,8 @@ scripts/             command-surface and gateway smoke tests
 
 See [SECURITY.md](SECURITY.md). In short:
 
-- do not commit `~/.openclaude/config.json`;
-- openclaude writes config and runtime files with owner-only permissions on Unix;
+- do not commit `~/.claude-occ/config.json`;
+- claude-occ writes config and runtime files with owner-only permissions on Unix;
 - prefer environment-variable references for provider keys;
 - keep the gateway on loopback unless you have reviewed the exposure;
 - use `occ native` for Claude Code subscription OAuth.
@@ -308,6 +308,6 @@ MIT. See [LICENSE](LICENSE).
 
 ## Disclaimer
 
-openclaude is an independent community project and is not affiliated with or endorsed by Anthropic,
+claude-occ is an independent community project and is not affiliated with or endorsed by Anthropic,
 OpenAI, Umans, or any provider. Review each upstream provider's Terms of Service before routing
 traffic through a local proxy.

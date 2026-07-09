@@ -9,7 +9,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-export OPENCLAUDE_HOME="$TMPDIR_OCC"
+export CLAUDE_OCC_HOME="$TMPDIR_OCC"
 unset UMANS_API_KEY DEEPSEEK_API_KEY
 OCC=(cargo run --quiet --manifest-path "$ROOT/Cargo.toml" --)
 
@@ -36,7 +36,7 @@ if [[ "$(find "$TMPDIR_OCC" -maxdepth 1 -name 'config.json.bak*' | wc -l)" != "1
   echo "init kept more than one backup file" >&2
   exit 1
 fi
-OPENCLAUDE_HOME="$TMPDIR_RESET" "${OCC[@]}" init --reset >/dev/null
+CLAUDE_OCC_HOME="$TMPDIR_RESET" "${OCC[@]}" init --reset >/dev/null
 if [[ ! -f "$TMPDIR_RESET/config.json" ]]; then
   echo "init --reset did not create config" >&2
   exit 1

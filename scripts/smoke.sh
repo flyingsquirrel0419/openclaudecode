@@ -14,7 +14,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-export OPENCLAUDE_HOME="$TMPDIR_OCC"
+export CLAUDE_OCC_HOME="$TMPDIR_OCC"
 
 node <<'NODE' >"$TMPDIR_OCC/fake-openai.log" 2>&1 &
 const http = require("node:http");

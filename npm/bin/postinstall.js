@@ -11,17 +11,17 @@ const pkg = require("../package.json");
 if (existsSync(source)) {
   copyFileSync(source, dest);
   if (process.platform !== "win32") chmodSync(dest, 0o755);
-  console.log(`openclaude: installed local ${target}`);
+  console.log(`claude-occ: installed local ${target}`);
 } else {
   const asset = assetName();
-  const repo = process.env.OPENCLAUDE_RELEASE_REPO || "flyingsquirrel0419/openclaudecode";
+  const repo = process.env.CLAUDE_OCC_RELEASE_REPO || "flyingsquirrel0419/claude-occ";
   const url = `https://github.com/${repo}/releases/download/v${pkg.version}/${asset}`;
   download(url, dest).then(() => {
     if (process.platform !== "win32") chmodSync(dest, 0o755);
-    console.log(`openclaude: installed ${asset}`);
+    console.log(`claude-occ: installed ${asset}`);
   }).catch((err) => {
-    console.warn(`openclaude: could not download ${asset}: ${err.message}`);
-    console.warn("openclaude: run `cargo build --release` and copy target/release/occ into npm/bin for local packaging.");
+    console.warn(`claude-occ: could not download ${asset}: ${err.message}`);
+    console.warn("claude-occ: run `cargo build --release` and copy target/release/occ into npm/bin for local packaging.");
     process.exitCode = 1;
   });
 }

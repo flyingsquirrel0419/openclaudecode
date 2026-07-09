@@ -1,6 +1,6 @@
-# Contributing to openclaude
+# Contributing to claude-occ
 
-openclaude is a Rust CLI and local gateway for Claude Code. Keep changes small, verified, and tied to
+claude-occ is a Rust CLI and local gateway for Claude Code. Keep changes small, verified, and tied to
 observable Claude Code behavior.
 
 ## Development Setup
@@ -12,7 +12,7 @@ Prerequisites:
 - Claude Code installed if you are testing the launcher shim manually
 
 ```bash
-cd openclaude
+cd claude-occ
 cargo test
 cargo build --release
 ```
@@ -127,19 +127,19 @@ GitHub releases and npm publishing are handled by `.github/workflows/release.yml
 Before publishing to npm, add an npm automation token as a private repository secret:
 
 ```bash
-gh secret set NPM_TOKEN --repo flyingsquirrel0419/openclaudecode
+gh secret set NPM_TOKEN --repo flyingsquirrel0419/claude-occ
 ```
 
 Or, if the token is already in your shell:
 
 ```bash
-gh secret set NPM_TOKEN --repo flyingsquirrel0419/openclaudecode --body "$NPM_TOKEN"
+gh secret set NPM_TOKEN --repo flyingsquirrel0419/claude-occ --body "$NPM_TOKEN"
 ```
 
 Verify that the secret exists without printing its value:
 
 ```bash
-gh secret list --repo flyingsquirrel0419/openclaudecode
+gh secret list --repo flyingsquirrel0419/claude-occ
 ```
 
 Do not commit npm tokens, `.npmrc`, or command transcripts that contain token values.

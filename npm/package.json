@@ -1,12 +1,19 @@
 {
-  "name": "openclaudecode",
+  "name": "claude-occ",
   "version": "1.0.0",
-  "description": "Claude Code provider gateway proxy",
+  "description": "occ gateway proxy for Claude Code",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flyingsquirrel0419/claude-occ.git"
+  },
+  "homepage": "https://github.com/flyingsquirrel0419/claude-occ#readme",
+  "bugs": {
+    "url": "https://github.com/flyingsquirrel0419/claude-occ/issues"
+  },
   "bin": {
     "occ": "bin/occ.js",
-    "openclaude": "bin/occ.js",
-    "openclaudecode": "bin/occ.js"
+    "claude-occ": "bin/occ.js"
   },
   "scripts": {
     "postinstall": "node ./bin/postinstall.js",

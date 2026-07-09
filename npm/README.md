@@ -1,15 +1,16 @@
-# openclaudecode
+# claude-occ
 
-This npm package installs the `occ`, `openclaude`, and `openclaudecode` launchers for openclaude.
+This npm package installs the `occ` launcher for claude-occ. It also exposes `claude-occ` as a
+package-name alias.
 
-openclaude is a local Claude Code gateway proxy. It starts a local `occ` daemon, injects
+claude-occ is a local Claude Code gateway proxy. It starts a local `occ` daemon, injects
 `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY` for Claude Code, and routes Claude Messages API traffic to
 configured providers.
 
 ## Install
 
 ```bash
-npm install -g openclaudecode
+npm install -g claude-occ
 occ init
 claude
 ```

@@ -29,7 +29,7 @@ use crate::config::{AdapterKind, Config, ProviderConfig, config_path, enrich_pro
 #[command(
     name = "occ",
     version,
-    about = "openclaude: Claude Code provider gateway"
+    about = "claude-occ: occ gateway proxy for Claude Code"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -38,7 +38,7 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Create a default ~/.openclaude/config.json.
+    /// Create a default ~/.claude-occ/config.json.
     Init {
         /// Reset to the built-in default config without prompts.
         #[arg(long)]
@@ -63,7 +63,7 @@ enum Command {
     Stop,
     /// Ensure the local gateway is running.
     Ensure,
-    /// Install a claude launcher shim that auto-starts/injects openclaude env.
+    /// Install a claude launcher shim that auto-starts/injects occ gateway env.
     Enable,
     /// Remove the claude shim and return Claude Code to native behavior.
     Native,
@@ -91,7 +91,7 @@ enum Command {
         #[command(subcommand)]
         command: ShimCommand,
     },
-    /// Print shell exports for using Claude Code through openclaude without a shim.
+    /// Print shell exports for using Claude Code through occ without a shim.
     Env,
     /// Run local diagnostics.
     Doctor,
@@ -106,7 +106,7 @@ enum Command {
     SyncCache,
     /// Open the local dashboard URL or print it when no GUI exists yet.
     Gui,
-    /// Update instructions for npm-installed openclaude.
+    /// Update instructions for npm-installed claude-occ.
     Update {
         #[arg(long)]
         tag: Option<String>,
@@ -126,7 +126,7 @@ enum Command {
         #[arg(long)]
         legacy_openai: bool,
     },
-    /// Manage providers in ~/.openclaude/config.json.
+    /// Manage providers in ~/.claude-occ/config.json.
     Provider {
         #[command(subcommand)]
         command: ProviderCommand,
@@ -232,7 +232,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     if std::env::args().nth(1).as_deref() == Some("-v") {
-        println!("openclaude {}", env!("CARGO_PKG_VERSION"));
+        println!("claude-occ {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
@@ -258,7 +258,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Gui => cmd_gui(),
         Command::Update { tag } => cmd_update(tag),
         Command::Version => {
-            println!("openclaude {}", env!("CARGO_PKG_VERSION"));
+            println!("claude-occ {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
         Command::Restart => cmd_restart().await,
@@ -273,7 +273,7 @@ async fn cmd_ensure() -> anyhow::Result<()> {
     let cfg = Config::load_or_create()?;
     if gateway_healthy(&cfg).await {
         println!(
-            "openclaude gateway already running: http://{}:{}",
+            "claude-occ gateway already running: http://{}:{}",
             cfg.host, cfg.port
         );
         return Ok(());
@@ -286,7 +286,7 @@ async fn cmd_ensure() -> anyhow::Result<()> {
     let mut command = StdCommand::new(exe);
     command
         .arg("start")
-        .env("OPENCLAUDE_HOME", config::config_dir()?)
+        .env("CLAUDE_OCC_HOME", config::config_dir()?)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
@@ -294,19 +294,19 @@ async fn cmd_ensure() -> anyhow::Result<()> {
     {
         command.process_group(0);
     }
-    command.spawn().context("spawn openclaude gateway")?;
+    command.spawn().context("spawn claude-occ gateway")?;
 
     for _ in 0..50 {
         if gateway_healthy(&cfg).await {
             println!(
-                "openclaude gateway started: http://{}:{}",
+                "claude-occ gateway started: http://{}:{}",
                 cfg.host, cfg.port
             );
             return Ok(());
         }
         sleep(Duration::from_millis(100)).await;
     }
-    anyhow::bail!("openclaude gateway did not become healthy")
+    anyhow::bail!("claude-occ gateway did not become healthy")
 }
 
 async fn gateway_healthy(cfg: &Config) -> bool {
@@ -908,7 +908,7 @@ async fn cmd_init(reset: bool) -> anyhow::Result<()> {
     }
 
     println!();
-    println!("openclaude (occ) setup");
+    println!("occ setup");
     println!();
     println!(
         "Claude Code subscription OAuth is native-only. occ configures API-key or local providers for the gateway."
@@ -1044,7 +1044,7 @@ async fn stop_proxy_before_init() -> anyhow::Result<()> {
             .context("stop existing proxy before init")?;
     } else if let Ok(runtime) = config::read_runtime()
         && process_exists(runtime.pid)
-        && is_openclaude_pid(runtime.pid)
+        && is_occ_pid(runtime.pid)
     {
         stop_local_gateway_fallback(&cfg, "stale runtime before init")
             .await
@@ -1403,7 +1403,7 @@ async fn cmd_start(port: Option<u16>, host: String) -> anyhow::Result<()> {
     cfg.save()?;
     if gateway_healthy(&cfg).await {
         println!(
-            "openclaude gateway already running: http://{}:{}",
+            "claude-occ gateway already running: http://{}:{}",
             cfg.host, cfg.port
         );
         return Ok(());
@@ -1459,7 +1459,7 @@ async fn stop_local_gateway_fallback(cfg: &Config, reason: &str) -> anyhow::Resu
 
     let mut stopped = Vec::new();
     for pid in pids {
-        if pid == std::process::id() || !is_openclaude_pid(pid) {
+        if pid == std::process::id() || !is_occ_pid(pid) {
             continue;
         }
         terminate_pid(pid, false)?;
@@ -1468,7 +1468,7 @@ async fn stop_local_gateway_fallback(cfg: &Config, reason: &str) -> anyhow::Resu
 
     if stopped.is_empty() {
         let _ = config::remove_runtime();
-        anyhow::bail!("stop failed ({reason}); no local openclaude process found to stop");
+        anyhow::bail!("stop failed ({reason}); no local claude-occ process found to stop");
     }
 
     for _ in 0..30 {
@@ -1532,24 +1532,24 @@ fn parse_listener_pid_from_ss(output: &str, port: u16) -> Option<u32> {
     None
 }
 
-fn is_openclaude_pid(pid: u32) -> bool {
+fn is_occ_pid(pid: u32) -> bool {
     let exe = fs::read_link(format!("/proc/{pid}/exe")).ok();
     let exe_match = exe
         .as_ref()
         .and_then(|path| path.file_name())
         .and_then(|name| name.to_str())
-        .map(|name| matches!(name, "occ" | "openclaude"))
+        .map(|name| matches!(name, "occ" | "claude-occ"))
         .unwrap_or(false)
         || exe
             .as_ref()
-            .map(|path| path.to_string_lossy().contains("/openclaude/"))
+            .map(|path| path.to_string_lossy().contains("/claude-occ/"))
             .unwrap_or(false);
     if exe_match {
         return true;
     }
     fs::read_to_string(format!("/proc/{pid}/cmdline"))
         .map(|cmdline| {
-            cmdline.contains("openclaude") || cmdline.contains("/occ") || cmdline.contains(" occ ")
+            cmdline.contains("claude-occ") || cmdline.contains("/occ") || cmdline.contains(" occ ")
         })
         .unwrap_or(false)
 }
@@ -1588,7 +1588,7 @@ async fn cmd_restore(back: Option<String>) -> anyhow::Result<()> {
     match back.as_deref() {
         Some("back") => {
             integration::install_claude_shim()?;
-            println!("Claude Code now routes through openclaude again (undo with: occ restore).");
+            println!("Claude Code now routes through occ again (undo with: occ restore).");
             Ok(())
         }
         Some(value) => anyhow::bail!("unknown restore argument: {value}; expected `back`"),
@@ -1599,7 +1599,7 @@ async fn cmd_restore(back: Option<String>) -> anyhow::Result<()> {
 async fn cmd_native() -> anyhow::Result<()> {
     let _ = cmd_stop().await;
     integration::uninstall_claude_shim()?;
-    println!("openclaude proxy stopped; Claude Code restored to native mode.");
+    println!("occ proxy stopped; Claude Code restored to native mode.");
     Ok(())
 }
 
@@ -1611,7 +1611,7 @@ async fn cmd_uninstall() -> anyhow::Result<()> {
         fs::remove_dir_all(&dir).with_context(|| format!("remove {}", dir.display()))?;
     }
     println!(
-        "openclaude uninstalled: removed shim/runtime/config at {}",
+        "claude-occ uninstalled: removed shim/runtime/config at {}",
         dir.display()
     );
     Ok(())
@@ -1621,11 +1621,11 @@ async fn cmd_service(command: Option<ServiceCommand>) -> anyhow::Result<()> {
     match command.unwrap_or(ServiceCommand::Install) {
         ServiceCommand::Install | ServiceCommand::Start => {
             cmd_ensure().await?;
-            println!("openclaude service compatibility mode: gateway ensured via occ ensure");
+            println!("claude-occ service compatibility mode: gateway ensured via occ ensure");
         }
         ServiceCommand::Stop => {
             let _ = cmd_stop().await;
-            println!("openclaude service compatibility mode: gateway stop requested");
+            println!("claude-occ service compatibility mode: gateway stop requested");
         }
         ServiceCommand::Status => {
             cmd_status(false).await?;
@@ -1635,7 +1635,7 @@ async fn cmd_service(command: Option<ServiceCommand>) -> anyhow::Result<()> {
         }
         ServiceCommand::Uninstall => {
             let _ = cmd_stop().await;
-            println!("openclaude service compatibility mode: no OS service to uninstall");
+            println!("claude-occ service compatibility mode: no OS service to uninstall");
         }
     }
     Ok(())
@@ -1717,7 +1717,7 @@ async fn cmd_status(json_output: bool) -> anyhow::Result<()> {
             println!(
                 "claude mode: {}",
                 if integration::shim_state_path()?.exists() {
-                    "openclaude shim"
+                    "claude-occ shim"
                 } else {
                     "native/no shim"
                 }
@@ -1773,7 +1773,7 @@ fn shell_export_quote(value: &str) -> String {
 
 fn cmd_doctor() -> anyhow::Result<()> {
     let cfg = Config::load_or_create()?;
-    println!("openclaude doctor");
+    println!("claude-occ doctor");
     println!("config: {}", config_path()?.display());
     println!("gateway: http://{}:{}", cfg.host, cfg.port);
     println!("providers:");
@@ -1783,7 +1783,7 @@ fn cmd_doctor() -> anyhow::Result<()> {
     println!();
     println!("Claude subscription OAuth is native-only. Use `occ native` for subscription Claude.");
     println!(
-        "Use openclaude with provider API keys, Bedrock/Vertex, local models, or OpenAI-compatible endpoints."
+        "Use occ with provider API keys, Bedrock/Vertex, local models, or OpenAI-compatible endpoints."
     );
     Ok(())
 }
@@ -1806,7 +1806,7 @@ fn cmd_login(provider: Option<String>) -> anyhow::Result<()> {
             }
             AuthKind::Oauth => {
                 println!(
-                    "`{provider}` uses ocx OAuth. openclaude does not store or reuse those OAuth tokens for Claude Code; choose an API-key variant when available."
+                    "`{provider}` uses ocx OAuth. claude-occ does not store or reuse those OAuth tokens for Claude Code; choose an API-key variant when available."
                 );
                 return Ok(());
             }
@@ -1836,7 +1836,7 @@ fn cmd_sync() -> anyhow::Result<()> {
     let cfg = Config::load_or_create()?;
     cfg.save()?;
     println!(
-        "openclaude config synced for Claude Code gateway: {}",
+        "claude-occ config synced for Claude Code gateway: {}",
         config_path()?.display()
     );
     Ok(())
@@ -1852,14 +1852,14 @@ fn cmd_sync_cache() -> anyhow::Result<()> {
 fn cmd_gui() -> anyhow::Result<()> {
     let cfg = Config::load_or_create()?;
     let url = format!("http://{}:{}", cfg.host, cfg.port);
-    println!("OpenClaude dashboard is not built yet. Gateway URL: {url}");
+    println!("occ dashboard is not built yet. Gateway URL: {url}");
     Ok(())
 }
 
 fn cmd_update(tag: Option<String>) -> anyhow::Result<()> {
     let tag = tag.unwrap_or_else(|| "latest".to_string());
     println!(
-        "Update openclaude with npm: npm install -g openclaudecode{}",
+        "Update claude-occ with npm: npm install -g claude-occ{}",
         if tag == "latest" { "" } else { "@preview" }
     );
     Ok(())
@@ -1898,7 +1898,7 @@ fn cmd_recover_history(legacy_openai: bool) -> anyhow::Result<()> {
     if !legacy_openai {
         anyhow::bail!("Usage: occ recover-history --legacy-openai");
     }
-    println!("Claude Code history is native-owned; openclaude does not remap history rows.");
+    println!("Claude Code history is native-owned; claude-occ does not remap history rows.");
     Ok(())
 }
 

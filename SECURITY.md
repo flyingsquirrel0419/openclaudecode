@@ -2,8 +2,8 @@
 
 ## Supported Versions
 
-openclaude is pre-1.0. Security fixes target the latest `main` branch and the newest npm/release
-version when releases are available.
+Security fixes target the latest `main` branch and the newest npm/release version when releases are
+available.
 
 ## Reporting a Vulnerability
 
@@ -21,22 +21,22 @@ repository owner profile or use a private fork/patch handoff. Include:
 
 ## Credential Boundaries
 
-openclaude has two separate credential classes:
+claude-occ has two separate credential classes:
 
-1. Provider credentials, stored in `~/.openclaude/config.json` as direct values or environment-variable
+1. Provider credentials, stored in `~/.claude-occ/config.json` as direct values or environment-variable
    references such as `${UMANS_API_KEY}`.
-2. The generated local `gateway_token`, used by Claude Code to authenticate to the local openclaude
+2. The generated local `gateway_token`, used by Claude Code to authenticate to the local claude-occ
    gateway.
 
-Treat both as secrets. Do not commit `~/.openclaude/config.json`, shell histories containing direct
+Treat both as secrets. Do not commit `~/.claude-occ/config.json`, shell histories containing direct
 keys, or logs with auth headers.
 
-On Unix systems, openclaude writes config and runtime files with owner-only permissions (`0600`).
+On Unix systems, claude-occ writes config and runtime files with owner-only permissions (`0600`).
 Keep parent directories and shell environment files under the same access discipline.
 
 ## Claude Code Subscription OAuth
 
-Claude Code subscription OAuth is native-only. openclaude intentionally does not extract, forward, or
+Claude Code subscription OAuth is native-only. claude-occ intentionally does not extract, forward, or
 reuse Claude Code subscription tokens as upstream provider credentials.
 
 Use:
@@ -50,7 +50,7 @@ the launcher shim.
 
 ## Local Gateway Exposure
 
-By default openclaude binds to `127.0.0.1` and requires the generated gateway token for `/v1/*` and
+By default claude-occ binds to `127.0.0.1` and requires the generated gateway token for `/v1/*` and
 `/api/*` routes. `GET /healthz` is intentionally unauthenticated for process checks.
 
 Avoid binding to `0.0.0.0` unless you have reviewed the risk and network controls. If you expose the
@@ -73,7 +73,7 @@ to remove the shim and stop the proxy. Use:
 occ restore back
 ```
 
-to re-enable openclaude routing.
+to re-enable claude-occ routing.
 
 ## Secret Handling Guidelines
 
