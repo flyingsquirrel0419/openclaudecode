@@ -42,7 +42,7 @@ between Claude Code and your chosen upstream so you can:
 - keep the proxy on loopback and authenticate Claude Code with a generated local gateway token.
 
 <p align="center">
-  <img src="assets/openclaude-flow.svg" alt="openclaude request flow from Claude Code to occ to configured model providers" width="820">
+  <img src="assets/openclaude-flow.png" alt="openclaude request flow from Claude Code to occ to configured model providers" width="820">
 </p>
 
 ## Quick Start
