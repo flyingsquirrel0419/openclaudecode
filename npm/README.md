@@ -27,4 +27,6 @@ commands.
 
 Localized documentation: [English](https://github.com/flyingsquirrel0419/claude-occ#readme),
 [한국어](https://github.com/flyingsquirrel0419/claude-occ/blob/main/README.ko.md),
-[简体中文](https://github.com/flyingsquirrel0419/claude-occ/blob/main/README.zh-CN.md).
+[简体中文](https://github.com/flyingsquirrel0419/claude-occ/blob/main/README.zh-CN.md),
+[Español](https://github.com/flyingsquirrel0419/claude-occ/blob/main/README.es.md),
+[日本語](https://github.com/flyingsquirrel0419/claude-occ/blob/main/README.ja.md).
