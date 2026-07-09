@@ -24,3 +24,7 @@ npm install -g ./npm
 
 See the repository README for provider setup, native-mode behavior, security notes, and development
 commands.
+
+Localized documentation: [English](https://github.com/flyingsquirrel0419/claude-occ#readme),
+[한국어](https://github.com/flyingsquirrel0419/claude-occ/blob/main/README.ko.md),
+[简体中文](https://github.com/flyingsquirrel0419/claude-occ/blob/main/README.zh-CN.md).

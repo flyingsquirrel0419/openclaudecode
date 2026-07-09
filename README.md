@@ -1,6 +1,10 @@
 # claude-occ
 
 <p align="center">
+  English · <a href="README.ko.md">한국어</a> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
+<p align="center">
   <b>Claude Code, routed through your own provider gateway.</b>
 </p>
 
